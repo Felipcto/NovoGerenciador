@@ -4,7 +4,6 @@ import axios from 'axios';
 function App() {
   const [tarefas, setTarefas] = useState([]);
   const [nomeTarefa, setNomeTarefa] = useState('');
-  const [editTask, setEditTask] = useState(() => JSON.parse(localStorage.getItem('editTask')) || null);
 
   useEffect(() => {
     axios.get('http://localhost:3002/tarefas')
@@ -16,54 +15,28 @@ function App() {
       });
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('editTask', JSON.stringify(editTask));
-  }, [editTask]);
+  const handleToggleFeito = (id, feito) => {
+    const updatedTarefas = tarefas.map(tarefa => {
+      if (tarefa.id === id) {
+        return { ...tarefa, feito: !feito };
+      }
+      return tarefa;
+    });
 
-  const handleSubmit = event => {
-    event.preventDefault();
-
-    if (editTask) {
-      axios.put(`http://localhost:3002/tarefas/${editTask.id}`, { nome: nomeTarefa, feito: editTask.feito })
-        .then(response => {
-          setTarefas(tarefas.map(tarefa =>
-            tarefa.id === editTask.id ? { ...tarefa, nome: nomeTarefa } : tarefa
-          ));
-          setNomeTarefa('');
-          setEditTask(null);
+    const tarefaToUpdate = updatedTarefas.find(tarefa => tarefa.id === id);
+    if (tarefaToUpdate) {
+      axios.put(`http://localhost:3002/tarefas/${id}`, { nome: tarefaToUpdate.nome, feito: !feito })
+        .then(() => {
+          setTarefas(updatedTarefas);
         })
         .catch(error => {
           console.error('Erro ao atualizar tarefa:', error);
         });
     } else {
-      axios.post('http://localhost:3002/tarefas', { nome: nomeTarefa, feito: false })
-        .then(response => {
-          setTarefas([...tarefas, { id: response.data.id, nome: nomeTarefa, feito: false }]);
-          setNomeTarefa('');
-        })
-        .catch(error => {
-          console.error('Erro ao criar tarefa:', error);
-        });
+      // Caso a tarefa não seja encontrada, atualize apenas o estado
+      setTarefas(updatedTarefas);
     }
   };
-
-  const handleToggleFeito = id => {
-    const taskToToggle = tarefas.find(tarefa => tarefa.id === id);
-    if (!taskToToggle) return;
-
-    const updatedFeito = !taskToToggle.feito;
-
-    axios.put(`http://localhost:3002/tarefas/${id}`, { nome: taskToToggle.nome, feito: updatedFeito })
-      .then(() => {
-        setTarefas(tarefas.map(tarefa =>
-          tarefa.id === id ? { ...tarefa, feito: updatedFeito } : tarefa
-        ));
-      })
-      .catch(error => {
-        console.error('Erro ao atualizar tarefa:', error);
-      });
-  };
-
 
   const handleDeleteTarefa = id => {
     axios.delete(`http://localhost:3002/tarefas/${id}`)
@@ -75,9 +48,15 @@ function App() {
       });
   };
 
-  const handleEditTask = tarefa => {
-    setNomeTarefa(tarefa.nome);
-    setEditTask(tarefa);
+  const handleAddTarefa = () => {
+    axios.post('http://localhost:3002/tarefas', { nome: nomeTarefa, feito: false })
+      .then(response => {
+        setNomeTarefa('');
+        window.location.reload(); // Recarrega a página
+      })
+      .catch(error => {
+        console.error('Erro ao criar tarefa:', error);
+      });
   };
 
   return (
@@ -89,15 +68,14 @@ function App() {
             <input
               type="checkbox"
               checked={tarefa.feito}
-              onChange={() => handleToggleFeito(tarefa.id)}
+              onChange={() => handleToggleFeito(tarefa.id, tarefa.feito)}
             />
             {tarefa.nome}
             <button onClick={() => handleDeleteTarefa(tarefa.id)}>Excluir</button>
-            <button onClick={() => handleEditTask(tarefa)}>Editar</button>
           </li>
         ))}
       </ul>
-      <form onSubmit={handleSubmit}>
+      <form>
         <input
           type="text"
           value={nomeTarefa}
@@ -105,7 +83,7 @@ function App() {
           placeholder="Nome da tarefa"
           required
         />
-        <button type="submit">{editTask ? 'Atualizar Tarefa' : 'Adicionar Tarefa'}</button>
+        <button type="button" onClick={handleAddTarefa}>Adicionar Tarefa</button>
       </form>
     </div>
   );

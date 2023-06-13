@@ -33,7 +33,7 @@ function App() {
           console.error('Erro ao atualizar tarefa:', error);
         });
     } else {
-      // Caso a tarefa não seja encontrada, atualize apenas o estado
+    
       setTarefas(updatedTarefas);
     }
   };
@@ -52,7 +52,7 @@ function App() {
     axios.post('http://localhost:3002/tarefas', { nome: nomeTarefa, feito: false })
       .then(response => {
         setNomeTarefa('');
-        window.location.reload(); // Recarrega a página
+        window.location.reload();
       })
       .catch(error => {
         console.error('Erro ao criar tarefa:', error);
